@@ -2,7 +2,7 @@
 
 基金买入逻辑回归的运行、数据口径及验收见 [机器学习 Demo](ML_DEMO.md)。
 
-两位开发者用各自的编辑器和 Git 分支，在同一个 Spark Standalone 集群上提交、联调和优化作业。示例采用模拟公募基金申购记录。交付包含可直接提交的部署包，以及带有基础版本、两条开发分支和集成版本的 Git bundle。
+两位开发者用各自的编辑器和 Git 分支，在同一个 Spark Standalone 集群上提交、联调和优化作业。示例采用模拟公募基金申购记录，交付包含可直接提交的部署包。
 
 ## 1. 团队怎么开发和运行
 
@@ -81,8 +81,8 @@ Spark 2.4.3 只支持 Python 3.4–3.7，而 148 的系统 Python 是 3.12，只
 该 3.7 编译时未带 `_ssl`，不能自行 `pip install`。NumPy 1.21.6（支持 3.7 的最后一个大版本）用任一可联网的 Python 3 下载 `numpy-1.21.6-cp37-cp37m-manylinux*.whl`，解包到独立 site 目录：
 
 ```bash
-mkdir -p /data/spark-project-fund-ml/py37-site
-python3 -m zipfile -e numpy-1.21.6-cp37-cp37m-manylinux*.whl /data/spark-project-fund-ml/py37-site
+mkdir -p /data/spark-project-fund-mlnew/py37-site
+python3 -m zipfile -e numpy-1.21.6-cp37-cp37m-manylinux*.whl /data/spark-project-fund-mlnew/py37-site
 ```
 
 驱动和 Executor 必须同时看到这个目录。`demo.env` 用 `PYTHONPATH` 指定，`scripts/run.sh` 会额外补一条 `--conf spark.executorEnv.PYTHONPATH=$PYTHONPATH`；缺这条时 Executor 会在 `pyspark.ml.linalg` 上报 `No module named 'numpy'`。
@@ -91,11 +91,11 @@ python3 -m zipfile -e numpy-1.21.6-cp37-cp37m-manylinux*.whl /data/spark-project
 
 ### 4.2 配置和首跑
 
-将 `spark-project-fund-ml.zip` 上传到自己的工作目录，执行以下命令。使用 Git 的同事可以进入自己检出的仓库，使用同一套配置和命令。
+将 `spark-project-fund-ml.zip` 上传到服务器，解压到目标目录；Git 用户直接进入自己的克隆。本机部署目录为 `/data/spark-project-fund-mlnew`。
 
 ```bash
 unzip spark-project-fund-ml.zip
-cd spark-project-fund-ml
+cd spark-project-fund-ml        # Git 克隆则进入克隆目录，如 /data/spark-project-fund-mlnew
 cp -n config/demo.env.example demo.env
 nano demo.env
 ```
@@ -105,10 +105,10 @@ nano demo.env
 | `SPARK_MASTER` | Spark Master 的 `spark://` 地址 |
 | `SPARK_MYSQL_JAR` | 148 上兼容的 Connector/J JAR 绝对路径 |
 | `PYSPARK_PYTHON`、`PYSPARK_DRIVER_PYTHON` | 同一份 3.7 解释器的绝对路径，模板为 `/data/spark-python37/bin/python3` |
-| `PYTHONPATH` | NumPy 所在 site 目录，模板为 `/data/spark-project-fund-ml/py37-site` |
+| `PYTHONPATH` | NumPy 所在 site 目录，模板为 `/data/spark-project-fund-mlnew/py37-site` |
 | `DEMO_MODEL_ROOT` | `fund_purchase_lr` 的模型输出根目录，Driver 与 Executor 都要可写 |
 | `DEMO_MYSQL_HOST`、`DEMO_MYSQL_PORT` | 测试 MySQL 地址及端口，模板端口为 3306 |
-| `DEMO_MYSQL_SCHEMA` | 库名，默认 `spark_project_demo`；多人共用服务器时各用各的库名 |
+| `DEMO_MYSQL_SCHEMA` | 库名，模板为 `spark_project_demo_new`；多人共用服务器时各用各的库名 |
 | `DEMO_MYSQL_SETUP_USER` | 建库账号，需目标库的 `CREATE`、`REFERENCES`、`SELECT`、`INSERT`、`UPDATE` |
 | `DEMO_MYSQL_USER` | 作业账号，需源表 `SELECT`，结果表及登记表 `SELECT`、`INSERT` |
 | `DEMO_DATE_FROM`、`DEMO_DATE_TO` | 默认统计区间，两端包含；命令行传入日期时以命令行为准 |
@@ -138,7 +138,7 @@ WHERE s.run_id = 'RUN_ID' AND s.customer_id = 'C001' AND s.fund_id = 'F001';
 
 ## 5. 两个人如何演示开发和合并
 
-Git bundle 内有四条可检出的分支。团队可以用自己的 Git 仓库承载同样的流程，演示包则可以在隔离目录中直接克隆复现。
+两人在各自分支开发，主分支合并。示例分工：
 
 | 分支 | 内容 | 验收 |
 | --- | --- | --- |
@@ -147,18 +147,27 @@ Git bundle 内有四条可检出的分支。团队可以用自己的 Git 仓库�
 | `demo/daily-fund-type` | 开发者 B 新增日汇总与登记 | 用同一入口提交 `daily_fund_type`，出具独立核验 `PASS` |
 | `main` | 两条分支合并后的版本 | 两条作业各重新提交一次，均通过回查 |
 
-可把 bundle 上传到 148 的可读路径，在两份独立目录检出。完整的建库脚本可从任一分支执行。每个目录各自配置 `demo.env` 并加载。
+开发者 A 在自己的分支修改并推送：
 
 ```bash
-git clone -b demo/customer-last-date /path/to/team-demo.bundle demo-a
-git clone -b demo/daily-fund-type /path/to/team-demo.bundle demo-b
-git clone -b main /path/to/team-demo.bundle demo-main
-# 在两个终端分别进入 demo-a / demo-b 后执行对应命令
+git switch -c demo/customer-last-date
+# 修改作业与核验 SQL
+git commit -am "feat: add last confirm date"
+git push -u origin demo/customer-last-date
+```
+
+开发者 B 并行创建 `demo/daily-fund-type`，实现日汇总作业。合并时切回主分支：
+
+```bash
+git switch main
+git merge --no-ff demo/customer-last-date
+git merge --no-ff demo/daily-fund-type
 bash scripts/run.sh customer_fund
 bash scripts/run.sh daily_fund_type
-# 在 demo-main 把两个作业都重跑，并查看合并记录
 git log --graph --oneline --all
 ```
+
+两份目录各自配置 `demo.env`，使用不同的 `DEMO_MYSQL_SCHEMA` 和 `DEMO_MODEL_ROOT`，可以在同一台 Master 上并行提交。
 
 每次运行的 `CODE_VERSION` 由 `scripts/common.sh` 统一判定，共三种形态：
 
@@ -227,6 +236,6 @@ bash scripts/compare_daily.sh DIRECT_RUN_ID PREAGG_RUN_ID
 | 打部署包 | `bash scripts/package.sh` | 生成 `dist/spark-project-fund-ml.zip`，含代码、文档、测试和 `data/FAR-Trans.zip` |
 | 单元测试 | `python3 -m unittest discover -s tests -v` | 只依赖标准库，不需要 Spark 或 MySQL |
 
-`logs/`、`data/`、`dist/` 与 `demo.env` 都在 `.gitignore` 中：日志和数据按环境生成，部署包由 `package.sh` 现场构建。Git 检出下 `package.sh` 会重打 `team-demo.bundle` 并刷新 `REVISION`；存在未提交改动时拒绝打包，避免交付物与代码版本不一致。FAR-Trans 的来源、许可与固定 SHA-256 记录在 `NOTICE`。
+`logs/`、`data/`、`dist/` 与 `demo.env` 都在 `.gitignore` 中：日志和数据按环境生成，部署包由 `package.sh` 现场构建。Git 检出下 `package.sh` 会把当前提交写入包内 `REVISION`；存在未提交改动时拒绝打包，避免交付物与代码版本不一致。FAR-Trans 的来源、许可与固定 SHA-256 记录在 `NOTICE`。
 
 测试覆盖参数与连接校验、FAR-Trans 字段校验和 SQL 字面量转义。Spark 作业本身仍以 `scripts/demo_all.sh` 的端到端验收为准。

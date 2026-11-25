@@ -44,11 +44,11 @@ FAR-Trans ZIP → MySQL 源表 → samples.py 生成特征与标签
 | `spark_project/fund_ml/job.py` | 复用工程 JDBC 组件，回写并登记 `run_id`、数据版本、代码版本、Spark 应用 ID 和模型路径 |
 | `sql/setup_ml.sql`、`sql/verify_fund_ml.sql` | 初始化源表和模型结果表，独立复算标签和分类指标 |
 
-包内 `team-demo.bundle` 可以直接克隆。两位开发者可分别检出 `demo/ml-samples` 与 `demo/ml-training` 查看样本和训练模块的改动，合并版本在 `main`。PyCharm、Trae、WorkBuddy、VS Code 都使用同一套入口。两个终端连接同一个 Spark Master，可用各自的工作目录和模型输出路径独立提交。 [Spark 2.4.3 逻辑回归](https://archive.apache.org/dist/spark/docs/2.4.3/ml-classification-regression.html#logistic-regression)
+样本与训练模块的改动可以分别放在 `demo/ml-samples`、`demo/ml-training` 分支，合并版本在 `main`。PyCharm、Trae、WorkBuddy、VS Code 都使用同一套入口。两个终端连接同一个 Spark Master，可用各自的工作目录和模型输出路径独立提交。 [Spark 2.4.3 逻辑回归](https://archive.apache.org/dist/spark/docs/2.4.3/ml-classification-regression.html#logistic-regression)
 
 ## 3. 部署与运行
 
-在公司网络 SSH 登录 148。解压部署包后进入 `spark-project-fund-ml`。从 `config/demo.env.example` 复制 `demo.env`，填入 Spark Master、Connector/J 和 MySQL 连接信息。增加 `DEMO_MODEL_ROOT` 指向 **Driver 与 Executor 均可见且可写的绝对存储路径**，例如团队 HDFS 的工作目录，或所有进程都挂载到同一路径的共享目录。训练会在其下创建 `run_id` 子目录。 [Spark 2.4.3 MLlib 依赖](https://archive.apache.org/dist/spark/docs/2.4.3/ml-guide.html#dependencies)
+在公司网络 SSH 登录 148。解压部署包后进入项目目录，本机为 `/data/spark-project-fund-mlnew`。从 `config/demo.env.example` 复制 `demo.env`，填入 Spark Master、Connector/J 和 MySQL 连接信息。增加 `DEMO_MODEL_ROOT` 指向 **Driver 与 Executor 均可见且可写的绝对存储路径**，例如团队 HDFS 的工作目录，或所有进程都挂载到同一路径的共享目录。训练会在其下创建 `run_id` 子目录。 [Spark 2.4.3 MLlib 依赖](https://archive.apache.org/dist/spark/docs/2.4.3/ml-guide.html#dependencies)
 
 Python 侧按 [README 4.1](README.md) 使用源码编译的 `/data/spark-python37/bin/python3`，并把 `PYTHONPATH` 指向 NumPy 所在的 `py37-site`。`run.sh` 会把该 `PYTHONPATH` 透传给 Executor；只配驱动端时，Executor 会在 `pyspark.ml.linalg` 上报 `No module named 'numpy'`。
 
@@ -59,7 +59,7 @@ bash scripts/load_far_trans.sh data/FAR-Trans.zip
 bash scripts/run.sh fund_purchase_lr
 ```
 
-初始化和导入用测试库配置里的建库账号，需要目标库的 `CREATE`、`SELECT`、`INSERT`、`UPDATE`。运行账号对 `far_customer`、`far_asset`、`far_trade`、`far_dataset` 需要 `SELECT`，对 `fund_ml_prediction`、`fund_ml_metric` 和 `fund_ml_run` 需要 `SELECT`、`INSERT`。真实部署的 `data/` 只放这一个官方 ZIP，源码仓库不跟踪它；`load_far_trans.sh` 直接流式解压导入，不需要预先拆分。ZIP 的 SHA-256 是 `d0d6cfe027732bab45fdcf9af80eff4fefddc789aedae9bdce0d3d6cfd05cfb6`。从 Git bundle 克隆代码时，可以用部署包内的同一份 ZIP，或省略路径由脚本从发布站下载。密码按提示输入。
+初始化和导入用测试库配置里的建库账号，需要目标库的 `CREATE`、`SELECT`、`INSERT`、`UPDATE`。运行账号对 `far_customer`、`far_asset`、`far_trade`、`far_dataset` 需要 `SELECT`，对 `fund_ml_prediction`、`fund_ml_metric` 和 `fund_ml_run` 需要 `SELECT`、`INSERT`。真实部署的 `data/` 只放这一个官方 ZIP，源码仓库不跟踪它；`load_far_trans.sh` 直接流式解压导入，不需要预先拆分。ZIP 的 SHA-256 是 `d0d6cfe027732bab45fdcf9af80eff4fefddc789aedae9bdce0d3d6cfd05cfb6`。从 Git 克隆代码时，可以用部署包内的同一份 ZIP，或省略路径由脚本从发布站下载。密码按提示输入。
 
 执行成功后，从日志复制 `VERIFY_COMMAND=` 后面的整条命令。MySQL 从源交易复算测试集标签，再根据已保存的分数和阈值复算分类、混淆矩阵及阈值指标。末行 `PASS` 表示独立对账通过。
 

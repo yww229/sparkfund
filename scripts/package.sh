@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build dist/spark-project-fund-ml.zip with a consistent REVISION and bundle.
+# Build dist/spark-project-fund-ml.zip with a consistent REVISION.
 set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 
@@ -9,10 +9,7 @@ resolve_code_version
 [[ $code_version != *-dirty ]] || die 'Commit or stash code changes before packaging.'
 
 if [[ -d $project_dir/.git ]]; then
-    git -C "$project_dir" bundle create "$project_dir/team-demo.bundle" --all >/dev/null
     git -C "$project_dir" rev-parse HEAD > "$project_dir/REVISION.tmp"
-elif [[ -e $project_dir/team-demo.bundle ]]; then
-    printf 'WARN: no .git; the packaged bundle is the existing file, not a fresh build.\n' >&2
 fi
 
 stage=$(mktemp -d)
@@ -20,7 +17,7 @@ trap 'rm -rf -- "$stage"; rm -f -- "$project_dir/REVISION.tmp"' EXIT
 root="$stage/spark-project-fund-ml"
 mkdir -p "$root"
 
-for item in app.py README.md ML_DEMO.md NOTICE REVISION config scripts sql spark_project tests team-demo.bundle; do
+for item in app.py README.md ML_DEMO.md NOTICE REVISION config scripts sql spark_project tests; do
     [[ -e $project_dir/$item ]] && cp -a "$project_dir/$item" "$root/"
 done
 find "$root" -name '__pycache__' -type d -prune -exec rm -rf {} +

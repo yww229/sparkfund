@@ -1,0 +1,15 @@
+/demo.env
+/.idea/
+/.vscode/
+/.trae/
+/.venv/
+/dist/
+/.pytest_cache/
+/logs/
+/models/
+/data/
+/spark-warehouse/
+/REVISION.tmp
+__pycache__/
+*.py[cod]
+*.jar

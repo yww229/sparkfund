@@ -1,0 +1,16 @@
+"""Physical table names shared by the Spark jobs and the run manifest."""
+
+DEMO_CUSTOMER = "demo_customer"
+DEMO_FUND = "demo_fund"
+DEMO_TRADE = "demo_fund_trade"
+CUSTOMER_FUND = "customer_fund_summary"
+DAILY_FUND_TYPE = "daily_fund_type_summary"
+DEMO_RUN = "demo_run"
+
+FAR_DATASET = "far_dataset"
+FAR_CUSTOMER = "far_customer"
+FAR_ASSET = "far_asset"
+FAR_TRADE = "far_trade"
+ML_PREDICTION = "fund_ml_prediction"
+ML_METRIC = "fund_ml_metric"
+ML_RUN = "fund_ml_run"
